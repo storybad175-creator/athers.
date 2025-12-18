@@ -1,3 +1,0 @@
-# Aether Tournament Ads Configuration
-# Replace the placeholder with your actual Publisher ID after setup
-google.com, pub-0000000000000000, DIRECT, f08c47fec0942fa0
