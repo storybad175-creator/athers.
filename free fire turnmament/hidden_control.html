@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Tournament - Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Inter:wght@400;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+
+<body>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const key = urlParams.get('key');
+        if (key !== 'AETHER_SECRET_KEY') {
+            document.body.innerHTML = '<h1 style="color:red;text-align:center;margin-top:20%">ACCESS DENIED</h1>';
+            setTimeout(() => window.location.href = 'index.html', 2000);
+            throw new Error('Access Denied');
+        }
+    </script>
+
+    <div class="admin-layout">
+        <nav class="admin-sidebar">
+            <div class="sidebar-brand">
+                <h2>AETHER <span style="color:var(--color-primary)">//</span> ADMIN</h2>
+            </div>
+            <ul class="sidebar-nav">
+                <li><a href="admin-dashboard.html">📊 Dashboard</a></li>
+                <li><a href="hidden_control.html" class="active">➕ Create Tournament</a></li>
+                <li><a href="admin-tournaments.html">🎮 Tournaments</a></li>
+                <li><a href="javascript:void(0)" onclick="openCustomCodeModal()" style="color:#00ff00;">⚡ Custom
+                        Features</a></li>
+                <li><a href="admin-players.html">👥 Players</a></li>
+                <li><a href="admin-payments.html">💳 Payments</a></li>
+                <li><a href="admin-withdrawals.html">💸 Withdrawals</a></li>
+                <li><a href="admin-wallet.html">💰 Earnings</a></li>
+                <li><a href="admin-settings.html">⚙️ Settings</a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <button onclick="handleLogout()" class="btn" style="width:100%">LOGOUT</button>
+            </div>
+        </nav>
+
+        <main class="admin-main">
+            <div class="admin-header">
+                <h1>CREATE TOURNAMENT</h1>
+                <p style="color:var(--color-text-muted)">Set up a new custom room tournament</p>
+            </div>
+
+            <div class="grid grid-2" style="align-items: start;">
+                <!-- Tournament Details -->
+                <div class="card">
+                    <h3 style="color:var(--color-secondary);margin-bottom:20px">📋 BASIC INFO</h3>
+                    <form id="tournament-form" onsubmit="handleCreateTournament(event)">
+                        <div style="margin-bottom:20px">
+                            <label style="color:#888;font-size:0.8rem">TOURNAMENT TITLE</label>
+                            <input type="text" id="tour-title" class="form-control"
+                                placeholder="e.g., BOOYAH NIGHT SHOWDOWN" required>
+                        </div>
+
+                        <div style="margin-bottom:20px">
+                            <label style="color:#888;font-size:0.8rem">TOURNAMENT LOGO</label>
+                            <input type="file" id="tour-logo-file" class="form-control" accept="image/*"
+                                onchange="previewLogo()">
+                            <img id="logo-preview" src=""
+                                style="max-height:100px; margin-top:10px; display:none; border:1px solid #444;">
+                            <input type="hidden" id="tour-logo">
+                        </div>
+
+                        <div class="grid grid-2" style="margin-bottom:20px">
+                            <div>
+                                <label style="color:#888;font-size:0.8rem">DATE</label>
+                                <input type="date" id="tour-date" class="form-control" required>
+                            </div>
+                            <div>
+                                <label style="color:#888;font-size:0.8rem">TIME</label>
+                                <input type="time" id="tour-time" class="form-control" required>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-3" style="margin-bottom:20px">
+                            <div>
+                                <label style="color:#888;font-size:0.8rem">MAP</label>
+                                <select id="tour-map" class="form-control">
+                                    <option>BERMUDA</option>
+                                    <option>PURGATORY</option>
+                                    <option>KALAHARI</option>
+                                    <option>ALPINE</option>
+                                    <option>NEXTERRA</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="color:#888;font-size:0.8rem">MODE</label>
+                                <select id="tour-mode" class="form-control">
+                                    <option>BR - SOLO</option>
+                                    <option>BR - DUO</option>
+                                    <option>BR - SQUAD</option>
+                                    <option>BR - TEAM 4v4</option>
+                                    <option>CS - 1v1</option>
+                                    <option>CS - 2v2</option>
+                                    <option>CS - 3v3</option>
+                                    <option>CS - 4v4</option>
+                                    <option>LONE WOLF - 1v1</option>
+                                    <option>LONE WOLF - 2v2</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="color:#888;font-size:0.8rem">SLOTS</label>
+                                <select id="tour-slots" class="form-control">
+                                    <option value="12">12 Players</option>
+                                    <option value="24">24 Players</option>
+                                    <option value="48" selected>48 Players</option>
+                                    <option value="100">100 Players</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div style="margin-bottom:20px">
+                            <label style="color:#888;font-size:0.8rem">DESCRIPTION (Optional)</label>
+                            <textarea id="tour-description" class="form-control" rows="3"
+                                placeholder="Add tournament rules, requirements, etc."></textarea>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Prize Budget & Distribution -->
+                <div class="card">
+                    <h3 style="color:var(--color-secondary);margin-bottom:20px">💰 PRIZE DISTRIBUTION</h3>
+
+                    <div style="background:rgba(255,165,0,0.05); padding:15px; border-radius:5px; margin-bottom:20px;">
+                        <label style="color:orange;font-size:0.8rem">TOTAL SPONSORED BUDGET (₹)</label>
+                        <div style="display:flex;gap:10px">
+                            <input type="number" id="tour-budget" class="form-control" placeholder="e.g. 1500"
+                                value="0">
+                            <button type="button" onclick="autoDistribute()"
+                                class="btn btn-primary">AUTO-DISTRIBUTE</button>
+                        </div>
+                        <p style="color:#666;font-size:0.7rem;margin-top:5px">Calculates Prize 1 (50%), Prize 2 (30%),
+                            Prize 3 (20%) automatically.</p>
+                    </div>
+
+                    <div class="grid grid-2" style="margin-bottom:20px">
+                        <div>
+                            <label style="color:#888;font-size:0.8rem">ENTRY FEE (₹)</label>
+                            <input type="number" id="tour-entry-fee" class="form-control" value="0" min="0"
+                                placeholder="0 = Free">
+                        </div>
+                        <div>
+                            <label style="color:#888;font-size:0.8rem">PER-KILL BONUS (₹)</label>
+                            <input type="number" id="tour-per-kill" class="form-control" value="5" min="0">
+                        </div>
+                    </div>
+
+                    <h4 style="color:#888;margin:20px 0 15px;font-size:0.9rem">PRIZE BREAKDOWN</h4>
+
+                    <div class="grid grid-3" style="margin-bottom:20px">
+                        <div>
+                            <label style="color:gold;font-size:0.8rem">🥇 1ST PLACE (₹)</label>
+                            <input type="number" id="tour-prize-1" class="form-control" value="500" min="0">
+                        </div>
+                        <div>
+                            <label style="color:silver;font-size:0.8rem">🥈 2ND PLACE (₹)</label>
+                            <input type="number" id="tour-prize-2" class="form-control" value="300" min="0">
+                        </div>
+                        <div>
+                            <label style="color:#cd7f32;font-size:0.8rem">🥉 3RD PLACE (₹)</label>
+                            <input type="number" id="tour-prize-3" class="form-control" value="100" min="0">
+                        </div>
+                    </div>
+
+                    <!-- Prize Pool Calculator -->
+                    <div
+                        style="background:rgba(0,240,255,0.1);padding:20px;border-left:3px solid var(--color-secondary);margin:20px 0">
+                        <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+                            <span style="color:#888">Expected Entry Fees:</span>
+                            <span id="calc-entry" style="color:white">₹0</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;margin-bottom:10px">
+                            <span style="color:#888">Total Prize Pool:</span>
+                            <span id="calc-prizes" style="color:var(--color-secondary)">₹0</span>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;font-weight:bold">
+                            <span style="color:#888">Platform Profit:</span>
+                            <span id="calc-profit" style="color:var(--color-primary)">₹0</span>
+                        </div>
+                    </div>
+
+                    <button type="submit" form="tournament-form" class="btn btn-primary"
+                        style="width:100%;padding:15px">
+                        🚀 CREATE TOURNAMENT
+                    </button>
+                </div>
+            </div>
+
+            <!-- Recent Tournaments -->
+            <div class="card" style="margin-top:30px">
+                <h3 style="margin-bottom:15px">RECENT TOURNAMENTS</h3>
+                <div id="recent-tournaments" class="activity-list">
+                    <!-- Dynamic -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Custom Code Generation Modal -->
+    <div id="custom-code-modal" class="modal-overlay"
+        style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.8); z-index:1000; justify-content:center; align-items:center;">
+        <div class="card" style="width:80%; max-width:800px; height:80vh; overflow-y:auto; position:relative;">
+            <button onclick="closeCustomCodeModal()"
+                style="position:absolute; top:20px; right:20px; background:none; border:none; color:white; font-size:2rem; cursor:pointer;">&times;</button>
+            <h2 style="color:var(--color-primary); margin-bottom:20px;">⚡ SYSTEM OVERRIDE (Custom Features)</h2>
+
+            <div class="tabs" style="display:flex; gap:10px; margin-bottom:20px;">
+                <button onclick="switchTab('html')" class="btn" id="btn-html">HTML</button>
+                <button onclick="switchTab('css')" class="btn" id="btn-css">CSS</button>
+                <button onclick="switchTab('js')" class="btn" id="btn-js">JAVASCRIPT</button>
+            </div>
+
+            <textarea id="code-editor" class="form-control"
+                style="font-family:monospace; height:400px; background:#111; color:#0f0;"
+                placeholder="// Inject custom code here..."></textarea>
+
+            <div style="margin-top:20px; text-align:right;">
+                <button onclick="saveCustomCode()" class="btn btn-primary">INJECT CODE</button>
+            </div>
+            <p style="color:#888; margin-top:10px; font-size:0.8rem;">* Code is stored consistently and applied to user
+                pages.</p>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/database.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        // Calculate prize pool on input change
+        ['tour-entry-fee', 'tour-slots', 'tour-prize-1', 'tour-prize-2', 'tour-prize-3', 'tour-per-kill'].forEach(id => {
+            document.getElementById(id)?.addEventListener('input', calculatePrizePool);
+        });
+
+        function calculatePrizePool() {
+            const entryFee = parseInt(document.getElementById('tour-entry-fee').value) || 0;
+            const slots = parseInt(document.getElementById('tour-slots').value) || 48;
+            const prize1 = parseInt(document.getElementById('tour-prize-1').value) || 0;
+            const prize2 = parseInt(document.getElementById('tour-prize-2').value) || 0;
+            const prize3 = parseInt(document.getElementById('tour-prize-3').value) || 0;
+            const perKill = parseInt(document.getElementById('tour-per-kill').value) || 0;
+
+            const totalEntry = entryFee * slots;
+            const estimatedKills = slots * 2; // Estimate ~2 kills per player on average
+            const totalPrizes = prize1 + prize2 + prize3 + (perKill * estimatedKills);
+            const profit = totalEntry - totalPrizes;
+
+            document.getElementById('calc-entry').textContent = '₹' + totalEntry;
+            document.getElementById('calc-prizes').textContent = '₹' + totalPrizes;
+            document.getElementById('calc-profit').textContent = '₹' + profit;
+            document.getElementById('calc-profit').style.color = profit >= 0 ? '#00ff00' : '#ff0000';
+        }
+
+        function autoDistribute() {
+            const budget = parseInt(document.getElementById('tour-budget').value) || 0;
+            if (budget <= 0) return alert('Please enter a budget first');
+
+            // Logic: 50% for 1st, 30% for 2nd, 20% for 3rd (Simplistic)
+            document.getElementById('tour-prize-1').value = Math.floor(budget * 0.5);
+            document.getElementById('tour-prize-2').value = Math.floor(budget * 0.3);
+            document.getElementById('tour-prize-3').value = Math.floor(budget * 0.2);
+            calculatePrizePool();
+        }
+
+        function previewLogo() {
+            const file = document.getElementById('tour-logo-file').files[0];
+            const preview = document.getElementById('logo-preview');
+            const hidden = document.getElementById('tour-logo'); // Stores base64
+
+            if (file) {
+                const reader = new FileReader();
+                reader.onloadend = function () {
+                    preview.src = reader.result;
+                    preview.style.display = 'block';
+                    hidden.value = reader.result; // Store base64 string
+                }
+                reader.readAsDataURL(file);
+            }
+        }
+
+        async function handleCreateTournament(event) {
+            event.preventDefault();
+            const btn = event.target.querySelector('button[type="submit"]');
+            btn.disabled = true;
+            btn.textContent = 'CREATING...';
+
+            try {
+                const tournament = {
+                    title: document.getElementById('tour-title').value,
+                    logo: document.getElementById('tour-logo').value || '',
+                    date: document.getElementById('tour-date').value + 'T' + document.getElementById('tour-time').value,
+                    map: document.getElementById('tour-map').value,
+                    mode: document.getElementById('tour-mode').value,
+                    teamSize: document.getElementById('tour-slots').value,
+                    description: document.getElementById('tour-description').value,
+                    entryFee: parseInt(document.getElementById('tour-entry-fee').value) || 0,
+                    perKillBonus: parseInt(document.getElementById('tour-per-kill').value) || 0,
+                    prizeFirst: parseInt(document.getElementById('tour-prize-1').value) || 0,
+                    prizeSecond: parseInt(document.getElementById('tour-prize-2').value) || 0,
+                    prizeThird: parseInt(document.getElementById('tour-prize-3').value) || 0,
+                    status: 'upcoming',
+                    trackingState: 'idle'
+                };
+
+                await db.createTournament(tournament);
+                await db.logAnalytics('tournament_created', { title: tournament.title, entryFee: tournament.entryFee });
+
+                alert('✅ Tournament Created Successfully!');
+                event.target.reset();
+                calculatePrizePool();
+                loadRecentTournaments();
+
+            } catch (err) {
+                alert('Error: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '🚀 CREATE TOURNAMENT';
+            }
+        }
+
+        async function loadRecentTournaments() {
+            const container = document.getElementById('recent-tournaments');
+            try {
+                const tournaments = await db.getTournaments();
+                const recent = tournaments.slice(0, 5);
+
+                if (recent.length === 0) {
+                    container.innerHTML = '<p style="color:var(--color-text-muted)">No tournaments created yet</p>';
+                    return;
+                }
+
+                container.innerHTML = recent.map(t => `
+                    <div class="activity-item">
+                        <div>
+                            <span style="color:white">${t.title}</span>
+                            <span class="badge ${t.trackingState === 'live' ? 'live' : 'upcoming'}" style="margin-left:10px">${t.trackingState || t.status}</span>
+                        </div>
+                        <span style="color:var(--color-primary)">${t.entryFee ? '₹' + t.entryFee : 'FREE'}</span>
+                    </div>
+                `).join('');
+            } catch (err) {
+                container.innerHTML = '<p style="color:red">Error loading tournaments</p>';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            calculatePrizePool();
+            loadRecentTournaments();
+
+            // Set default date to today
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('tour-date').value = today;
+            document.getElementById('tour-time').value = '20:00';
+        });
+
+        // Custom Code Logic
+        let currentTab = 'html';
+
+        function openCustomCodeModal() {
+            document.getElementById('custom-code-modal').style.display = 'flex';
+            loadCustomCode();
+        }
+
+        function closeCustomCodeModal() {
+            document.getElementById('custom-code-modal').style.display = 'none';
+        }
+
+        function switchTab(tab) {
+            currentTab = tab;
+            loadCustomCode(); // Reload content for the tab
+            document.querySelectorAll('.tabs .btn').forEach(b => b.style.opacity = '0.5');
+            document.getElementById('btn-' + tab).style.opacity = '1';
+        }
+
+        function loadCustomCode() {
+            const code = localStorage.getItem('custom_' + currentTab) || '';
+            document.getElementById('code-editor').value = code;
+        }
+
+        function saveCustomCode() {
+            const code = document.getElementById('code-editor').value;
+            localStorage.setItem('custom_' + currentTab, code);
+            alert('✅ ' + currentTab.toUpperCase() + ' Code Injected Successfully!');
+        }
+    </script>
+</body>
+
+</html>

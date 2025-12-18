@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Match Manager - Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Inter:wght@400;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+
+<body>
+    <div class="admin-layout">
+        <nav class="admin-sidebar">
+            <div class="sidebar-brand">
+                <h2>AETHER <span style="color:var(--color-primary)">//</span> ADMIN</h2>
+            </div>
+            <ul class="sidebar-nav">
+                <li><a href="admin-dashboard.html">📊 Dashboard</a></li>
+                <li><a href="hidden_control.html">➕ Create Tournament</a></li>
+                <li><a href="admin-tournaments.html" class="active">🎮 Tournaments</a></li>
+                <li><a href="admin-players.html">👥 Players</a></li>
+                <li><a href="admin-payments.html">💳 Payments</a></li>
+                <li><a href="admin-withdrawals.html">💸 Withdrawals</a></li>
+                <li><a href="admin-wallet.html">💰 Earnings</a></li>
+                <li><a href="admin-settings.html">⚙️ Settings</a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <button onclick="handleLogout()" class="btn" style="width:100%">LOGOUT</button>
+            </div>
+        </nav>
+
+        <main class="admin-main">
+            <div class="admin-header">
+                <div>
+                    <a href="admin-tournaments.html" style="color:#888;text-decoration:none">← Back</a>
+                    <h1>MATCH MANAGER</h1>
+                    <p id="tour-title" style="color:var(--color-secondary)">Loading...</p>
+                </div>
+                <div id="status-badge" class="badge">Checking...</div>
+            </div>
+
+            <div class="grid grid-2" style="align-items:start">
+
+                <!-- Room Management -->
+                <div class="card">
+                    <h3 style="color:var(--color-primary);margin-bottom:15px">🔑 ROOM CREDENTIALS</h3>
+                    <p style="color:#888;font-size:0.8rem;margin-bottom:15px">
+                        Enter the Custom Room ID & Password here. Users will see this 15 minutes before match time.
+                    </p>
+                    <form onsubmit="updateRoomDetails(event)">
+                        <div style="margin-bottom:15px">
+                            <label style="color:white;font-size:0.8rem">ROOM ID</label>
+                            <input type="text" id="room-id" class="form-control" placeholder="12345678" required>
+                        </div>
+                        <div style="margin-bottom:15px">
+                            <label style="color:white;font-size:0.8rem">PASSWORD</label>
+                            <input type="text" id="room-pass" class="form-control" placeholder="PASS123">
+                        </div>
+                        <button type="submit" class="btn btn-primary" style="width:100%">UPDATE ROOM DETAILS</button>
+                    </form>
+                </div>
+
+                <!-- Prize Distribution Control -->
+                <div class="card">
+                    <h3 style="color:var(--color-secondary);margin-bottom:15px">💰 DISTRIBUTE PRIZES</h3>
+                    <p style="color:#888;font-size:0.8rem;margin-bottom:15px">
+                        Once all scores are verified below, click this button to calculate earnings and credit user
+                        wallets.
+                    </p>
+                    <div
+                        style="background:rgba(255,0,0,0.1);padding:10px;border:1px solid red;color:red;font-size:0.8rem;margin-bottom:15px">
+                        ⚠️ WARNING: This action is irreversible. Ensure all ranks/kills are correct.
+                    </div>
+                    <button onclick="handleDistribute()" id="btn-distribute" class="btn"
+                        style="width:100%;background:#444">
+                        CALCULATE & DISTRIBUTE
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- Scoreboard & Results -->
+            <div class="card" style="margin-top:30px">
+                <h3 style="margin-bottom:15px">📊 SCOREBOARD & RESULTS</h3>
+
+                <div style="overflow-x:auto">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Player / IGN</th>
+                                <th>Screenshot Proof</th>
+                                <th>Kills (Admin Input)</th>
+                                <th>Rank (Admin Input)</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="results-body">
+                            <!-- Dynamic -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Image Modal -->
+    <div id="img-modal" class="modal-overlay" onclick="this.classList.remove('active')">
+        <div class="modal-content" style="background:transparent;box-shadow:none">
+            <img id="modal-img" src="" style="max-width:100%;max-height:80vh;border:2px solid var(--color-primary)">
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/database.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const tourId = urlParams.get('id');
+        let currentTournament = null;
+        let submittedResults = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!tourId) {
+                alert('No tournament specified');
+                window.location.href = 'admin-tournaments.html';
+                return;
+            }
+            await loadTournamentInfo();
+            await loadResults();
+        });
+
+        async function loadTournamentInfo() {
+            currentTournament = await db.getTournamentById(tourId);
+            if (!currentTournament) return;
+
+            document.getElementById('tour-title').textContent = currentTournament.title;
+            document.getElementById('status-badge').textContent = currentTournament.status.toUpperCase();
+
+            // Fill Room Details
+            if (currentTournament.roomId) document.getElementById('room-id').value = currentTournament.roomId;
+            if (currentTournament.roomPass) document.getElementById('room-pass').value = currentTournament.roomPass;
+
+            if (currentTournament.status === 'completed') {
+                document.getElementById('btn-distribute').disabled = true;
+                document.getElementById('btn-distribute').textContent = 'TOURNAMENT COMPLETED';
+            }
+        }
+
+        async function updateRoomDetails(e) {
+            e.preventDefault();
+            const roomId = document.getElementById('room-id').value;
+            const pass = document.getElementById('room-pass').value;
+
+            try {
+                await db.updateRoomDetails(tourId, roomId, pass);
+                alert('Details Updated! Users will see this 15 mins before match.');
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        async function loadResults() {
+            const tbody = document.getElementById('results-body');
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center">Loading...</td></tr>';
+
+            submittedResults = await db.getMatchResults(tourId);
+
+            // Also get all registrations to show who hasn't submitted?
+            // For now, let's just show submitted results to keep it simple as per prompt requirements.
+
+            if (submittedResults.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center">No results submitted yet.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = submittedResults.map(r => `
+                <tr id="row-${r.id}">
+                    <td>
+                        <div style="font-weight:bold;color:white">${r.userIgn || 'Unknown'}</div>
+                        <div style="font-size:0.8rem;color:#666">${r.userEmail}</div>
+                    </td>
+                    <td>
+                        ${r.screenshot ? `<button onclick="viewImage('${r.screenshot}')" class="btn" style="padding:2px 10px;font-size:0.8rem">📷 View</button>` : 'No Image'}
+                    </td>
+                    <td>
+                        <input type="number" id="kills-${r.id}" class="form-control" style="width:80px;padding:5px" value="${r.kills || 0}" min="0">
+                    </td>
+                    <td>
+                        <input type="number" id="rank-${r.id}" class="form-control" style="width:80px;padding:5px" value="${r.rank || 0}" min="0">
+                    </td>
+                    <td>
+                        <span class="badge" style="background:${getStatusColor(r.status)}">${r.status.toUpperCase()}</span>
+                    </td>
+                    <td>
+                        ${r.status !== 'verified' ? `
+                        <button onclick="verifyResult('${r.id}')" class="btn btn-primary" style="padding:5px 10px;font-size:0.8rem">✔ Save</button>
+                        ` : '<span style="color:#00ff00">Saved</span>'}
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function getStatusColor(status) {
+            if (status === 'verified') return 'green';
+            if (status === 'rejected') return 'red';
+            return 'orange';
+        }
+
+        function viewImage(src) {
+            document.getElementById('modal-img').src = src;
+            document.getElementById('img-modal').classList.add('active');
+        }
+
+        async function verifyResult(resultId) {
+            const kills = document.getElementById(`kills-${resultId}`).value;
+            const rank = document.getElementById(`rank-${resultId}`).value;
+
+            try {
+                await db.verifyMatchResult(resultId, kills, rank);
+                // Simple UI update to avoid full reload
+                const row = document.getElementById(`row-${resultId}`);
+                row.querySelector('.badge').style.background = 'green';
+                row.querySelector('.badge').textContent = 'VERIFIED';
+                alert('Verified!');
+            } catch (err) {
+                alert(err.message);
+            }
+        }
+
+        async function handleDistribute() {
+            if (!confirm("Are you sure? This will payout all verified players and close the tournament.")) return;
+
+            const btn = document.getElementById('btn-distribute');
+            btn.innerHTML = 'PROCESSING PAVOUTS...';
+            btn.disabled = true;
+
+            try {
+                const logs = await db.distributePrizes(tourId);
+                alert('Success!\n' + logs.join('\n'));
+                loadTournamentInfo(); // Refresh state
+            } catch (err) {
+                alert('Error: ' + err.message);
+                btn.disabled = false;
+                btn.innerHTML = 'CALCULATE & DISTRIBUTE';
+            }
+        }
+    </script>
+</body>
+
+</html>

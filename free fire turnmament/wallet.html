@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wallet - FF Tournament</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Inter:wght@400;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+
+    <nav class="navbar">
+        <div class="container nav-flex">
+            <a href="dashboard.html" class="brand" style="text-decoration:none">AETHER <span
+                    style="color:var(--color-secondary)">//</span> WALLET</a>
+            <div style="display:flex;gap:15px">
+                <a href="dashboard.html" class="btn">🎮 TOURNAMENTS</a>
+                <button onclick="handleLogout()" class="btn">LOGOUT</button>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+
+        <!-- Balance Card -->
+        <div class="card"
+            style="text-align:center;margin-bottom:30px;background:linear-gradient(135deg, rgba(255,15,15,0.1), rgba(0,240,255,0.1))">
+            <p style="color:var(--color-text-muted);margin-bottom:10px">AVAILABLE BALANCE</p>
+            <h1 id="wallet-balance" style="font-size:4rem;color:white;margin:0">₹0</h1>
+            <div style="margin-top:30px;display:flex;justify-content:center;gap:20px;flex-wrap:wrap">
+                <button onclick="openAddMoney()" class="btn btn-primary" style="padding:15px 40px">+ ADD MONEY</button>
+                <button onclick="openWithdraw()" class="btn" style="padding:15px 40px">↓ WITHDRAW</button>
+            </div>
+        </div>
+
+        <div class="grid grid-2">
+            <!-- Quick Actions -->
+            <div class="card">
+                <h3 style="margin-bottom:20px;color:var(--color-secondary)">QUICK ADD</h3>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+                    <button onclick="quickAdd(50)" class="btn">₹50</button>
+                    <button onclick="quickAdd(100)" class="btn">₹100</button>
+                    <button onclick="quickAdd(200)" class="btn">₹200</button>
+                    <button onclick="quickAdd(500)" class="btn">₹500</button>
+                    <button onclick="quickAdd(1000)" class="btn">₹1000</button>
+                    <button onclick="openAddMoney()" class="btn btn-primary">Custom</button>
+                </div>
+
+                <!-- Referral Section -->
+                <div style="margin-top:30px;padding-top:20px;border-top:1px solid var(--glass-border)">
+                    <h4 style="color:var(--color-secondary);margin-bottom:15px">🎁 REFERRAL BONUS</h4>
+                    <p style="color:#888;font-size:0.9rem;margin-bottom:15px">Share your code and earn ₹10 for each
+                        friend who joins!</p>
+                    <div style="display:flex;gap:10px">
+                        <input type="text" id="referral-code" class="form-control" readonly
+                            style="font-weight:bold;text-align:center;color:var(--color-primary)">
+                        <button onclick="copyReferral()" class="btn">COPY</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Transaction History -->
+            <div class="card">
+                <h3 style="margin-bottom:20px">TRANSACTION HISTORY</h3>
+                <div id="transaction-list" style="max-height:350px;overflow-y:auto">
+                    <!-- Dynamic -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Pending Withdrawals -->
+        <div class="card" style="margin-top:30px" id="pending-section" style="display:none">
+            <h3 style="margin-bottom:20px">PENDING WITHDRAWALS</h3>
+            <div id="pending-withdrawals">
+                <!-- Dynamic -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Money Modal -->
+    <div id="add-modal" class="modal-overlay">
+        <div class="modal-content card">
+            <h2 style="color:var(--color-primary);margin-bottom:20px">ADD MONEY</h2>
+
+            <div style="margin-bottom:20px">
+                <label style="color:#888;font-size:0.8rem">AMOUNT (₹)</label>
+                <input type="number" id="add-amount" class="form-control" placeholder="Enter amount" min="10">
+            </div>
+
+            <div style="margin-bottom:20px">
+                <label style="color:#888;font-size:0.8rem">PAYMENT METHOD</label>
+                <div class="payment-grid"
+                    style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px">
+                    <button class="btn pay-btn" onclick="selectPayment('bkash')"
+                        style="border-color:#e2136e;color:#e2136e">bKash</button>
+                    <button class="btn pay-btn" onclick="selectPayment('nagad')"
+                        style="border-color:#f6921e;color:#f6921e">Nagad</button>
+                    <button class="btn pay-btn" onclick="selectPayment('rocket')"
+                        style="border-color:#8c3494;color:#8c3494">Rocket</button>
+                    <button class="btn pay-btn" onclick="selectPayment('upay')"
+                        style="border-color:#00aeef;color:#00aeef">Upay</button>
+                    <button class="btn pay-btn" onclick="selectPayment('firebase')"
+                        style="border-color:#ffcb2b;color:#ffcb2b">Firebase</button>
+                    <button class="btn pay-btn" onclick="selectPayment('demo')"
+                        style="border-color:#888;color:#888">Demo</button>
+                </div>
+                <input type="hidden" id="payment-method" value="">
+            </div>
+
+            <div style="display:flex;gap:10px">
+                <button onclick="processAddMoney()" class="btn btn-primary" style="flex:1">PAY NOW</button>
+                <button onclick="closeModal('add-modal')" class="btn" style="flex:1">CANCEL</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Withdraw Modal -->
+    <div id="withdraw-modal" class="modal-overlay">
+        <div class="modal-content card">
+            <h2 style="color:var(--color-secondary);margin-bottom:20px">WITHDRAW FUNDS</h2>
+
+            <div style="margin-bottom:20px">
+                <label style="color:#888;font-size:0.8rem">AMOUNT (₹)</label>
+                <input type="number" id="withdraw-amount" class="form-control" placeholder="Minimum ₹50" min="50">
+            </div>
+
+            <div style="margin-bottom:20px">
+                <label style="color:#888;font-size:0.8rem">WITHDRAW METHOD</label>
+                <select id="withdraw-method" class="form-control" onchange="updatePaymentFields()">
+                    <option value="bkash">bKash</option>
+                    <option value="nagad">Nagad</option>
+                    <option value="rocket">Rocket</option>
+                    <option value="upay">Upay</option>
+                    <option value="bank">Bank Transfer</option>
+                </select>
+            </div>
+
+            <div id="payment-fields">
+                <!-- Dynamic -->
+            </div>
+
+            <div style="padding:15px;background:rgba(255,165,0,0.1);border-left:3px solid orange;margin-bottom:20px">
+                <p style="color:orange;font-size:0.85rem">⏱️ Withdrawals are processed within 24-48 hours after admin
+                    approval.</p>
+            </div>
+
+            <div style="display:flex;gap:10px">
+                <button onclick="processWithdraw()" class="btn btn-primary" style="flex:1">REQUEST WITHDRAWAL</button>
+                <button onclick="closeModal('withdraw-modal')" class="btn" style="flex:1">CANCEL</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/database.js"></script>
+    <script src="js/payment.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        let currentUser = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            currentUser = db.getCurrentUser();
+            if (!currentUser) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            await loadWallet();
+            await loadTransactions();
+            await loadReferralCode();
+            await loadPendingWithdrawals();
+        });
+
+        async function loadWallet() {
+            const balance = await db.getWalletBalance(currentUser.email);
+            document.getElementById('wallet-balance').textContent = '₹' + balance;
+        }
+
+        async function loadTransactions() {
+            const container = document.getElementById('transaction-list');
+            try {
+                const transactions = await db.getTransactionHistory(currentUser.email);
+
+                if (transactions.length === 0) {
+                    container.innerHTML = '<p style="color:var(--color-text-muted)">No transactions yet</p>';
+                    return;
+                }
+
+                container.innerHTML = transactions.map(t => {
+                    const isCredit = t.type === 'credit';
+                    const icon = isCredit ? '↑' : '↓';
+                    const color = isCredit ? '#00ff00' : '#ff0000';
+                    const label = t.source || t.reason || t.type;
+
+                    return `
+                        <div style="display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.05)">
+                            <div>
+                                <span style="color:${color};margin-right:10px">${icon}</span>
+                                <span style="color:#aaa">${label}</span>
+                            </div>
+                            <span style="color:${color};font-weight:bold">${isCredit ? '+' : '-'}₹${t.amount}</span>
+                        </div>
+                    `;
+                }).join('');
+            } catch (err) {
+                container.innerHTML = '<p style="color:red">Error loading transactions</p>';
+            }
+        }
+
+        async function loadReferralCode() {
+            let code = await db.getReferralCode(currentUser.email);
+            if (!code) {
+                code = await db.generateReferralCode(currentUser.email);
+            }
+            document.getElementById('referral-code').value = code;
+        }
+
+        async function loadPendingWithdrawals() {
+            const container = document.getElementById('pending-withdrawals');
+            const section = document.getElementById('pending-section');
+
+            try {
+                const all = await db.getWithdrawals();
+                const pending = all.filter(w => w.email === currentUser.email && w.status === 'pending');
+
+                if (pending.length === 0) {
+                    section.style.display = 'none';
+                    return;
+                }
+
+                section.style.display = 'block';
+                container.innerHTML = pending.map(w => `
+                    <div style="display:flex;justify-content:space-between;padding:15px 0;border-bottom:1px solid var(--glass-border)">
+                        <div>
+                            <span style="color:white">₹${w.amount}</span>
+                            <span style="color:#888;margin-left:10px">to ${w.paymentDetails}</span>
+                        </div>
+                        <span class="badge" style="background:orange;color:black">PENDING</span>
+                    </div>
+                `).join('');
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function copyReferral() {
+            const code = document.getElementById('referral-code').value;
+            navigator.clipboard.writeText(code);
+            alert('Referral code copied! Share with friends to earn ₹10 each.');
+        }
+
+        function openAddMoney() {
+            document.getElementById('add-modal').classList.add('active');
+        }
+
+        function openWithdraw() {
+            document.getElementById('withdraw-modal').classList.add('active');
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
+
+        function quickAdd(amount) {
+            document.getElementById('add-amount').value = amount;
+            openAddMoney();
+        }
+
+        async function processAddMoney() {
+            const amount = parseInt(document.getElementById('add-amount').value);
+            const method = document.getElementById('payment-method').value;
+
+            if (!amount || amount < 10) {
+                alert('Minimum amount is ₹10');
+                return;
+            }
+
+            try {
+                if (method === 'demo') {
+                    // Demo mode - instant credit
+                    await db.addFunds(currentUser.email, amount, 'demo_deposit', { gateway: 'demo' });
+                    alert('✅ ₹' + amount + ' added to your wallet!');
+                    closeModal('add-modal');
+                    loadWallet();
+                    loadTransactions();
+                } else {
+                    // Razorpay
+                    await paymentSystem.pay(amount, method);
+                    closeModal('add-modal');
+                    loadWallet();
+                    loadTransactions();
+                }
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+
+
+        // Updated Payment Processing
+        function selectPayment(method) {
+            document.getElementById('payment-method').value = method;
+            document.querySelectorAll('.pay-btn').forEach(btn => btn.style.background = 'transparent');
+            const clicked = event.target;
+            clicked.style.background = clicked.style.color;
+            clicked.style.color = '#000';
+        }
+
+        function updatePaymentFields() {
+            const method = document.getElementById('withdraw-method').value;
+            const container = document.getElementById('payment-fields');
+
+            let label = 'Number';
+            let placeholder = '01XXXXXXXXX';
+
+            if (method === 'bank') {
+                label = 'Bank Account Number';
+                placeholder = 'Enter account number';
+            } else if (['bkash', 'nagad', 'rocket', 'upay'].includes(method)) {
+                label = method.charAt(0).toUpperCase() + method.slice(1) + ' Personal Number';
+                placeholder = '01XXXXXXXXX';
+            }
+
+            container.innerHTML = `
+                <div style="margin-bottom:20px">
+                    <label style="color:#888;font-size:0.8rem">${label}</label>
+                    <input type="text" id="payment-details" class="form-control" placeholder="${placeholder}">
+                </div>
+            `;
+        }
+
+        async function processWithdraw() {
+            const amount = parseInt(document.getElementById('withdraw-amount').value);
+            const method = document.getElementById('withdraw-method').value;
+            const details = document.getElementById('payment-details').value;
+
+            if (!amount || amount < 50) {
+                alert('Minimum withdrawal is ₹50');
+                return;
+            }
+
+            if (!details) {
+                alert('Please enter payment details');
+                return;
+            }
+
+            try {
+                await db.requestWithdrawal(currentUser.email, amount, method, details);
+                alert('✅ Withdrawal request submitted! You will receive funds within 24-48 hours after approval.');
+                closeModal('withdraw-modal');
+                loadWallet();
+                loadTransactions();
+                loadPendingWithdrawals();
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+    </script>
+    <style>
+        .pay-btn {
+            border: 1px solid #333;
+            transition: all 0.3s;
+        }
+
+        .pay-btn:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</body>
+
+</html>

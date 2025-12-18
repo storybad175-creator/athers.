@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Join the Elite - FF Tournament</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Inter:wght@400;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+</head>
+
+<body>
+
+    <div class="container" style="min-height: 100vh; display: flex; align-items: center; justify-content: center;">
+        <div class="card" style="width: 100%; max-width: 500px;">
+            <div style="text-align: center; margin-bottom: 2rem;">
+                <h2 style="color: var(--color-primary);">INITIATE PROTOCOL</h2>
+                <p style="color: var(--color-text-muted);">Smart Registration System</p>
+            </div>
+
+            <form onsubmit="handleRegister(event)">
+
+                <!-- AUTO FILL SECTION -->
+                <div style="margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--glass-border);">
+                    <label style="color: var(--color-secondary); font-size: 0.8rem;">STEP 1: IDENTITY
+                        VERIFICATION</label>
+                    <div style="display: flex; gap: 10px; margin-top: 5px;">
+                        <input type="number" id="uid" class="form-control" placeholder="ENTER FREE FIRE UID" required>
+                        <button type="button" id="fetch-btn" onclick="handleUidBlur()" class="btn"
+                            style="white-space: nowrap; padding: 10px 15px; font-size: 0.9rem;">CHECK UID</button>
+                    </div>
+                    <div id="fetch-status" style="margin-top: 5px; font-size: 0.8rem; height: 1.2rem;"></div>
+                </div>
+
+                <div class="grid grid-2">
+                    <div>
+                        <label style="font-size: 0.8rem; color: #aaa;">IN-GAME NAME</label>
+                        <input type="text" id="ign" class="form-control" placeholder="Auto-Filled" readonly
+                            style="color: var(--color-primary); font-weight: bold;">
+                    </div>
+                    <div>
+                        <label style="font-size: 0.8rem; color: #aaa;">LEVEL</label>
+                        <input type="text" id="level" class="form-control" placeholder="LVL" readonly>
+                    </div>
+                </div>
+
+                <div style="margin-top: 15px;">
+                    <label style="font-size: 0.8rem; color: #aaa;">REGION</label>
+                    <input type="text" id="region" class="form-control" placeholder="REGION" readonly>
+                </div>
+
+                <div class="grid grid-2" style="margin-top: 20px;">
+                    <input type="text" id="fullName" class="form-control" placeholder="Real Name (Optional)">
+                    <input type="tel" id="phone" class="form-control" placeholder="Phone Number" required>
+                </div>
+
+                <div style="margin-top: 20px;">
+                    <div style="display:flex;gap:10px;margin-bottom:10px">
+                        <input type="email" id="email" class="form-control" placeholder="Login Email" required>
+                        <button type="button" onclick="sendVerificationEmail()" class="btn" style="white-space:nowrap"
+                            id="verify-btn">VERIFY</button>
+                    </div>
+                    <div id="otp-section" style="display:none;margin-bottom:10px">
+                        <input type="text" id="otp-code" class="form-control" placeholder="Enter 6-Digit PIN Code"
+                            style="border-color:var(--color-secondary)">
+                    </div>
+                    <input type="password" id="password" class="form-control" placeholder="Create Password" required>
+                </div>
+
+                <div style="margin-top: 20px; font-size: 0.85rem; color: #888;">
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 8px;">
+                        <input type="checkbox" required> I agree to the <a href="terms.html" target="_blank"
+                            style="color: var(--color-primary);">Terms of Service</a>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; margin-bottom: 8px;">
+                        <input type="checkbox" required> I agree to the <a href="privacy-policy.html" target="_blank"
+                            style="color: var(--color-primary);">Privacy Policy</a>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                        <input type="checkbox" required> I agree to the <a href="refund-policy.html" target="_blank"
+                            style="color: var(--color-primary);">Refund Policy</a>
+                    </label>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-top: 30px;">
+                    AUTHORIZE REGISTRATION
+                </button>
+            </form>
+
+            <div
+                style="margin-top: 20px; text-align: center; border-top: 1px solid var(--glass-border); padding-top: 20px;">
+                <button onclick="handleGoogleLogin()" class="btn"
+                    style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; border-color: white; color: white;">
+                    <svg width="20" height="20" viewBox="0 0 24 24">
+                        <path fill="currentColor"
+                            d="M21.35 11.1h-9.17v2.73h6.51c-.33 3.81-3.5 5.44-6.5 5.44C8.36 19.27 5 16.25 5 12c0-4.1 3.2-7.27 7.2-7.27c3.09 0 4.9 1.97 4.9 1.97L19 4.72S16.56 2 12.1 2C6.42 2 2.03 6.8 2.03 12c0 5.05 4.13 10 10.22 10c5.35 0 9.25-3.67 9.25-9.09c0-1.15-.15-1.81-.15-1.81Z" />
+                    </svg>
+                    Sign up with Google
+                </button>
+                <p style="margin-top: 15px; color: var(--color-text-muted);">
+                    Already authorized? <a href="index.html" style="color: var(--color-primary);">Login</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/firebase-config.js"></script>
+    <script src="js/database.js"></script>
+    <script src="js/api.js"></script>
+    <!-- Explicitly including auth.js for global handlers AND register.js for page specific logic -->
+    <script src="js/auth.js"></script>
+    <script src="js/register.js"></script>
+</body>
+
+</html>

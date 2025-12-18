@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tournament Details - AETHER</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Inter:wght@400;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+
+    <nav class="navbar">
+        <div class="container nav-flex">
+            <div class="brand"><a href="dashboard.html" style="color:white; text-decoration:none">AETHER</a> <span
+                    style="color:var(--color-primary)">//</span> INTEL</div>
+            <div style="display:flex;gap:15px">
+                <a href="wallet.html" class="btn" id="nav-wallet">💰 ₹0</a>
+                <a href="dashboard.html" class="btn">RETURN TO HUB</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+
+        <!-- Header -->
+        <div class="card" style="margin-bottom:30px">
+            <div style="display:flex; justify-content:space-between; align-items:flex-start;flex-wrap:wrap;gap:20px">
+                <div>
+                    <div style="display:flex; gap:10px; margin-bottom:10px;flex-wrap:wrap">
+                        <span id="tour-status" class="badge">LOADING</span>
+                        <span id="tour-map" class="badge">...</span>
+                        <span id="tour-mode" class="badge">...</span>
+                    </div>
+                    <h1 id="tour-title" style="margin-bottom:5px; font-size:2.5rem; color:var(--color-primary)">
+                        LOADING...</h1>
+                    <p id="tour-date" style="color:var(--color-text-muted)">...</p>
+                </div>
+                <div style="text-align:right">
+                    <h2 id="tour-prize" style="color:var(--color-secondary);margin-bottom:5px">...</h2>
+                    <div style="color:var(--color-text-muted);font-size:0.9rem">PRIZE POOL</div>
+                    <p id="tour-per-kill" style="color:var(--color-primary);margin-top:10px">...</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="tour-content">
+            <!-- Dynamic Content (Room ID/Pass or Results) -->
+        </div>
+
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/database.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        let currentUser = null;
+        let tournament = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            currentUser = db.getCurrentUser();
+            if (!currentUser) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            // Load wallet balance
+            const balance = await db.getWalletBalance(currentUser.email);
+            document.getElementById('nav-wallet').textContent = '💰 ₹' + balance;
+
+            const tourId = new URLSearchParams(window.location.search).get('id');
+            if (tourId) {
+                await loadTournamentDetails(tourId);
+            } else {
+                window.location.href = 'dashboard.html';
+            }
+        });
+
+        async function loadTournamentDetails(id) {
+            tournament = await db.getTournamentById(id);
+            if (!tournament) {
+                document.getElementById('tour-content').innerHTML = '<div class="card"><p style="color:red">Tournament not found</p></div>';
+                return;
+            }
+
+            // Header info
+            document.getElementById('tour-title').textContent = tournament.title;
+            document.getElementById('tour-date').textContent = new Date(tournament.date).toLocaleString();
+            document.getElementById('tour-map').textContent = tournament.map || 'BERMUDA';
+            document.getElementById('tour-mode').textContent = tournament.mode || 'SOLO';
+
+            // Prize info
+            const totalPrize = (parseInt(tournament.prizeFirst) || 0) + (parseInt(tournament.prizeSecond) || 0) + (parseInt(tournament.prizeThird) || 0);
+            document.getElementById('tour-prize').textContent = '₹' + totalPrize;
+            document.getElementById('tour-per-kill').textContent = '₹' + (tournament.perKillBonus || 0) + ' per kill';
+
+            // Status Badge
+            const statusEl = document.getElementById('tour-status');
+            if (tournament.status === 'completed') {
+                statusEl.textContent = 'COMPLETED';
+                statusEl.style.background = 'var(--color-text-muted)';
+                statusEl.style.color = 'black';
+            } else if (tournament.trackingState === 'live') {
+                statusEl.textContent = 'LIVE';
+                statusEl.classList.add('live');
+            } else {
+                statusEl.textContent = 'UPCOMING';
+                statusEl.classList.add('upcoming');
+            }
+
+            // Content
+            const container = document.getElementById('tour-content');
+            if (tournament.status === 'completed') {
+                renderLeaderboard(container);
+            } else {
+                await renderLobby(container);
+            }
+        }
+
+        function renderLeaderboard(container) {
+            const results = tournament.results || [];
+            results.sort((a, b) => (b.kills || 0) - (a.kills || 0));
+
+            container.innerHTML = `
+                <div class="card">
+                    <h2 style="color:var(--color-secondary); margin-bottom:20px">🏆 FINAL RESULTS</h2>
+                    <table style="width:100%; border-collapse:collapse; color:white;">
+                        <tr style="color:var(--color-text-muted); border-bottom:1px solid var(--glass-border)">
+                            <th style="text-align:left; padding:15px">RANK</th>
+                            <th style="text-align:left; padding:15px">PLAYER</th>
+                            <th style="text-align:center; padding:15px">KILLS</th>
+                            <th style="text-align:right; padding:15px">PRIZE</th>
+                        </tr>
+                        ${results.map((r, i) => `
+                            <tr style="border-bottom:1px solid var(--glass-border); background: ${i < 3 ? 'rgba(255,215,0,0.05)' : 'transparent'}">
+                                <td style="padding:15px; font-family:var(--font-heading); font-size:1.2rem; color:${i === 0 ? 'gold' : (i === 1 ? 'silver' : (i === 2 ? '#cd7f32' : 'white'))}">#${i + 1}</td>
+                                <td style="padding:15px; color:#ddd">${r.ign || r.uid}</td>
+                                <td style="padding:15px; text-align:center; font-family:var(--font-heading); font-size:1.3rem">${r.kills || 0}</td>
+                                <td style="padding:15px; text-align:right; font-family:var(--font-heading); font-size:1.5rem; color:var(--color-primary)">₹${r.prize || 0}</td>
+                            </tr>
+                        `).join('')}
+                    </table>
+                </div>
+            `;
+        }
+
+        async function renderLobby(container) {
+            const registrations = await db.getRegistrations(tournament.id);
+            const isRegistered = registrations.find(r => r.userEmail === currentUser.email);
+            const slots = tournament.teamSize || 48;
+
+            // Room Details Section
+            let roomSection = '';
+
+            if (tournament.trackingState === 'live' && isRegistered) {
+                roomSection = `
+                    <div class="card" style="border-color:var(--color-primary); box-shadow:var(--neon-glow); margin-bottom:30px; text-align:center">
+                        <h2 style="color:var(--color-primary);margin-bottom:10px">🔓 ROOM UNLOCKED</h2>
+                        <p style="color:#888;margin-bottom:20px">Enter the custom room in Free Fire now!</p>
+                        <div class="grid grid-2" style="margin-top:20px; text-align:left">
+                            <div style="background:rgba(0,0,0,0.3);padding:20px;text-align:center">
+                                <div style="font-size:0.8rem; color:#aaa">ROOM ID</div>
+                                <div style="font-size:3rem; font-family:var(--font-heading); color:white">${tournament.roomId || '------'}</div>
+                            </div>
+                            <div style="background:rgba(0,0,0,0.3);padding:20px;text-align:center">
+                                <div style="font-size:0.8rem; color:#aaa">PASSWORD</div>
+                                <div style="font-size:3rem; font-family:var(--font-heading); color:var(--color-secondary)">${tournament.roomPass || '------'}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Result Upload Section -->
+                    <div class="card" style="margin-bottom:30px; border-top:3px solid var(--color-secondary)">
+                        <h3 style="color:white;margin-bottom:15px">📸 MATCH RESULT SUBMISSION</h3>
+                        <p style="color:#888;font-size:0.9rem;margin-bottom:15px">
+                            After the match ends, take a screenshot of your rank and kills. Upload it here to claim your prize.
+                        </p>
+                        <form onsubmit="handleResultUpload(event)">
+                            <div style="margin-bottom:15px">
+                                <label style="display:block;margin-bottom:5px;color:#aaa">UPLOAD SCREENSHOT</label>
+                                <input type="file" id="result-file" class="form-control" accept="image/*" required>
+                            </div>
+                            <button type="submit" id="btn-upload" class="btn btn-primary" style="width:100%">SUBMIT RESULT</button>
+                        </form>
+                    </div>
+
+                    <div style="text-align:center;margin-bottom:30px">
+                        <button onclick="reportPlayer()" class="btn" style="border:1px solid red;color:red">⚠️ REPORT SUSPICIOUS PLAYER</button>
+                    </div>
+                `;
+            } else if (tournament.trackingState === 'live' && !isRegistered) {
+                roomSection = '<div class="card" style="margin-bottom:30px;border-color:red"><h3 style="color:red;text-align:center">⛔ ACCESS DENIED - NOT REGISTERED</h3></div>';
+            } else {
+                roomSection = `
+                    <div class="card" style="margin-bottom:30px; text-align:center; border:1px dashed var(--glass-border)">
+                        <h3 style="color:var(--color-text-muted)">⏳ WAITING FOR MATCH TO START</h3>
+                        <p style="color:#666;margin-top:10px">Room ID and Password will appear here when the admin starts the match.</p>
+                    </div>
+                `;
+            }
+
+            // Prize Breakdown
+            const prizeSection = `
+                <div class="card" style="margin-bottom:30px">
+                    <h3 style="margin-bottom:15px;color:var(--color-secondary)">💰 PRIZE BREAKDOWN</h3>
+                    <div class="grid grid-3" style="text-align:center">
+                        <div style="padding:20px;background:rgba(255,215,0,0.1)">
+                            <div style="font-size:2rem">🥇</div>
+                            <div style="font-size:1.5rem;color:gold;font-family:var(--font-heading)">₹${tournament.prizeFirst || 0}</div>
+                            <div style="color:#888;font-size:0.8rem">1ST PLACE</div>
+                        </div>
+                        <div style="padding:20px;background:rgba(192,192,192,0.1)">
+                            <div style="font-size:2rem">🥈</div>
+                            <div style="font-size:1.5rem;color:silver;font-family:var(--font-heading)">₹${tournament.prizeSecond || 0}</div>
+                            <div style="color:#888;font-size:0.8rem">2ND PLACE</div>
+                        </div>
+                        <div style="padding:20px;background:rgba(205,127,50,0.1)">
+                            <div style="font-size:2rem">🥉</div>
+                            <div style="font-size:1.5rem;color:#cd7f32;font-family:var(--font-heading)">₹${tournament.prizeThird || 0}</div>
+                            <div style="color:#888;font-size:0.8rem">3RD PLACE</div>
+                        </div>
+                    </div>
+                    <p style="text-align:center;margin-top:15px;color:var(--color-primary)">+ ₹${tournament.perKillBonus || 0} per kill for everyone</p>
+                </div>
+            `;
+
+            // Player List
+            container.innerHTML = `
+                ${roomSection}
+                ${prizeSection}
+                <div class="card">
+                    <h3 style="margin-bottom:15px">📋 REGISTERED PLAYERS (${registrations.length}/${slots})</h3>
+                    <div class="grid grid-3" style="gap:10px;">
+                        ${registrations.map(r => `
+                            <div style="padding:12px; background:rgba(255,255,255,0.05); border-left:3px solid ${r.userEmail === currentUser.email ? 'var(--color-primary)' : 'transparent'}">
+                                <span style="color:${r.userEmail === currentUser.email ? 'var(--color-primary)' : '#aaa'}">${r.userIgn || 'Unknown'}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+
+        }
+
+        async function handleResultUpload(e) {
+            e.preventDefault();
+            const fileInput = document.getElementById('result-file');
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            const btn = document.getElementById('btn-upload');
+            btn.innerHTML = 'UPLOADING...';
+            btn.disabled = true;
+
+            // Convert to Base64 (Simulating Storage)
+            const reader = new FileReader();
+            reader.onloadend = async function () {
+                try {
+                    const base64 = reader.result;
+                    await db.submitMatchResult(tournament.id, currentUser, base64);
+                    alert('✅ Result Submitted! Admin will verify shortly.');
+                    btn.innerHTML = 'SUBMITTED';
+                } catch (err) {
+                    alert('Error: ' + err.message);
+                    btn.innerHTML = 'SUBMIT RESULT';
+                    btn.disabled = false;
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function reportPlayer() {
+            const player = prompt("Enter the IGN of the suspicious player:");
+            if (player) {
+                // In a real app, this would save to a 'reports' collection
+                alert(`Report filed against ${player}. Admins will review gameplay footage.`);
+            }
+        }
+    </script>
+</body>
+
+</html>

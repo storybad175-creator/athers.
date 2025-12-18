@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - FF Tournament</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Inter:wght@400;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/admin.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+
+    <!-- Sidebar Navigation -->
+    <div class="admin-layout">
+        <nav class="admin-sidebar">
+            <div class="sidebar-brand">
+                <h2>AETHER <span style="color:var(--color-primary)">//</span> ADMIN</h2>
+            </div>
+            <ul class="sidebar-nav">
+                <li><a href="admin-dashboard.html" class="active">📊 Dashboard</a></li>
+                <li><a href="hidden_control.html">➕ Create Tournament</a></li>
+                <li><a href="admin-tournaments.html">🎮 Tournaments</a></li>
+                <li><a href="admin-players.html">👥 Players</a></li>
+                <li><a href="admin-payments.html">💳 Payments</a></li>
+                <li><a href="admin-withdrawals.html">💸 Withdrawals</a></li>
+                <li><a href="admin-wallet.html">💰 Earnings</a></li>
+                <li><a href="admin-settings.html">⚙️ Settings</a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <button onclick="handleLogout()" class="btn" style="width:100%">LOGOUT</button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="admin-main">
+            <div class="admin-header">
+                <h1>COMMAND CENTER</h1>
+                <p id="current-date" style="color:var(--color-text-muted)"></p>
+            </div>
+
+            <!-- Quick Stats -->
+            <div class="grid grid-4" style="margin-bottom:30px">
+                <div class="stat-card">
+                    <div class="stat-icon">💰</div>
+                    <div class="stat-value" id="stat-earnings">₹0</div>
+                    <div class="stat-label">TODAY'S EARNINGS</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">🎮</div>
+                    <div class="stat-value" id="stat-active">0</div>
+                    <div class="stat-label">ACTIVE TOURNAMENTS</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">👥</div>
+                    <div class="stat-value" id="stat-players">0</div>
+                    <div class="stat-label">TOTAL PLAYERS</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">⏳</div>
+                    <div class="stat-value" id="stat-pending">0</div>
+                    <div class="stat-label">PENDING WITHDRAWALS</div>
+                </div>
+            </div>
+
+            <!-- Payment Stats -->
+            <div class="card" style="margin-bottom:30px">
+                <h3 style="margin-bottom:15px">💳 PAYMENT OVERVIEW</h3>
+                <div class="grid grid-2">
+                    <div
+                        style="text-align:center; padding:20px; background:rgba(255,255,255,0.05); border-radius:10px;">
+                        <span style="font-size:2rem; font-weight:bold; color:var(--color-primary)"
+                            id="count-payments">0</span>
+                        <br>
+                        <span style="color:#888">TOTAL TRANSACTIONS</span>
+                    </div>
+                    <div
+                        style="text-align:center; padding:20px; background:rgba(255,255,255,0.05); border-radius:10px;">
+                        <span style="font-size:2rem; font-weight:bold; color:#00ff00" id="total-revenue">₹0</span>
+                        <br>
+                        <span style="color:#888">TOTAL REVENUE GENERATED</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity -->
+            <div class="grid grid-2">
+                <div class="card">
+                    <h3 style="margin-bottom:15px;color:var(--color-secondary)">RECENT PAYMENTS</h3>
+                    <div id="recent-payments" class="activity-list">
+                        <!-- Dynamic -->
+                    </div>
+                </div>
+                <div class="card">
+                    <h3 style="margin-bottom:15px;color:var(--color-primary)">LIVE TOURNAMENTS</h3>
+                    <div id="live-tournaments" class="activity-list">
+                        <!-- Dynamic -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Custom Code Injection FAB -->
+    <button onclick="openCustomCodeModal()" class="fab-btn" title="Inject Custom Code">
+        ➕
+    </button>
+
+    <!-- Custom Code Modal -->
+    <div id="custom-code-modal" class="modal-overlay">
+        <div class="modal-content card" style="max-width:800px; width:90%">
+            <h2 style="color:var(--color-primary);margin-bottom:20px">INJECT SYSTEM OVERRIDES</h2>
+            <p style="color:#aaa;margin-bottom:20px">Inject raw HTML, CSS, and JS into the user-facing application.
+                WARNING: Broken code can crash the app.</p>
+
+            <div class="tabs" style="display:flex;gap:10px;margin-bottom:15px">
+                <button onclick="switchTab('html')" id="tab-html" class="btn btn-primary code-tab">HTML</button>
+                <button onclick="switchTab('css')" id="tab-css" class="btn code-tab">CSS</button>
+                <button onclick="switchTab('js')" id="tab-js" class="btn code-tab">JS</button>
+            </div>
+
+            <div id="editor-html" class="code-editor-container">
+                <label style="display:block;color:#888;margin-bottom:5px">HTML (Injected at end of body)</label>
+                <textarea id="code-html" class="code-area" placeholder="<div>New Element</div>"></textarea>
+            </div>
+            <div id="editor-css" class="code-editor-container" style="display:none">
+                <label style="display:block;color:#888;margin-bottom:5px">CSS (Global Styles)</label>
+                <textarea id="code-css" class="code-area" placeholder=".custom-class { color: red; }"></textarea>
+            </div>
+            <div id="editor-js" class="code-editor-container" style="display:none">
+                <label style="display:block;color:#888;margin-bottom:5px">JavaScript (Executed on load)</label>
+                <textarea id="code-js" class="code-area"
+                    placeholder="console.log('System Override Active');"></textarea>
+            </div>
+
+            <div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end">
+                <button onclick="closeCustomCodeModal()" class="btn">CANCEL</button>
+                <button onclick="saveCustomCode()" class="btn btn-primary">DEPLOY PATCH</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/database.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // Set current date
+            document.getElementById('current-date').textContent = new Date().toLocaleDateString('en-US', {
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+            });
+
+            await loadDashboardStats();
+            // await loadCharts(); // REMOVED as requested
+            await loadRecentPayments();
+            await loadLiveTournaments();
+            await loadPaymentCounts();
+        });
+
+        async function loadPaymentCounts() {
+            try {
+                const transactions = await db.getTransactionHistory();
+                const validPayments = transactions.filter(t => t.type === 'credit' && t.source === 'deposit');
+                const totalCount = validPayments.length;
+                const totalRev = validPayments.reduce((acc, t) => acc + (t.amount || 0), 0);
+                const countEl = document.getElementById('count-payments');
+                if (countEl) countEl.textContent = totalCount;
+                const revEl = document.getElementById('total-revenue');
+                if (revEl) revEl.textContent = '₹' + totalRev;
+            } catch (err) {
+                console.error("Error loading payment counts", err);
+            }
+        }
+
+        async function loadDashboardStats() {
+            try {
+                const tournaments = await db.getTournaments();
+                const activeTournaments = tournaments.filter(t => t.status !== 'completed');
+                const liveTournaments = tournaments.filter(t => t.trackingState === 'live');
+                document.getElementById('stat-active').textContent = activeTournaments.length;
+
+                const users = await db.getAllUsers();
+                document.getElementById('stat-players').textContent = users.length || 0;
+
+                const withdrawals = await db.getWithdrawals('pending');
+                document.getElementById('stat-pending').textContent = withdrawals.length;
+
+                const transactions = await db.getTransactionHistory();
+                const today = new Date().toISOString().split('T')[0];
+                const todayTransactions = transactions.filter(t => t.timestamp.startsWith(today) && t.reason === 'entry_fee');
+                const todayEarnings = todayTransactions.reduce((sum, t) => sum + t.amount, 0);
+                document.getElementById('stat-earnings').textContent = '₹' + todayEarnings;
+            } catch (err) {
+                console.error('Error loading stats:', err);
+            }
+        }
+
+        async function loadRecentPayments() {
+            const container = document.getElementById('recent-payments');
+            try {
+                const transactions = await db.getTransactionHistory();
+                const recentPayments = transactions.slice(0, 5);
+                if (recentPayments.length === 0) {
+                    container.innerHTML = '<p style="color:var(--color-text-muted)">No recent payments</p>';
+                    return;
+                }
+                container.innerHTML = recentPayments.map(t => `
+                    <div class="activity-item">
+                        <div>
+                            <span style="color:${t.type === 'credit' ? '#00ff00' : '#ff0000'}">${t.type === 'credit' ? '+' : '-'}₹${t.amount}</span>
+                            <span style="color:#888;margin-left:10px">${t.email?.substring(0, 15)}...</span>
+                        </div>
+                        <span style="color:#555;font-size:0.8rem">${t.source || t.reason}</span>
+                    </div>
+                `).join('');
+            } catch (err) {
+                container.innerHTML = '<p style="color:red">Error loading payments</p>';
+            }
+        }
+
+        async function loadLiveTournaments() {
+            const container = document.getElementById('live-tournaments');
+            try {
+                const tournaments = await db.getTournaments();
+                const live = tournaments.filter(t => t.trackingState === 'live' || t.status === 'upcoming');
+                if (live.length === 0) {
+                    container.innerHTML = '<p style="color:var(--color-text-muted)">No live tournaments</p>';
+                    return;
+                }
+                container.innerHTML = live.slice(0, 5).map(t => `
+                    <div class="activity-item">
+                        <div>
+                            <span style="color:var(--color-primary)">${t.title}</span>
+                            <span class="badge ${t.trackingState === 'live' ? 'live' : ''}" style="margin-left:10px">${t.trackingState || t.status}</span>
+                        </div>
+                        <span style="color:#888">${t.entryFee ? '₹' + t.entryFee : 'FREE'}</span>
+                    </div>
+                `).join('');
+            } catch (err) {
+                container.innerHTML = '<p style="color:red">Error loading tournaments</p>';
+            }
+        }
+
+        // --- Custom Code Injection Logic ---
+
+        function openCustomCodeModal() {
+            document.getElementById('custom-code-modal').classList.add('active');
+            loadCurrentCustomCode();
+        }
+
+        function closeCustomCodeModal() {
+            document.getElementById('custom-code-modal').classList.remove('active');
+        }
+
+        function switchTab(tab) {
+            ['html', 'css', 'js'].forEach(t => {
+                document.getElementById('editor-' + t).style.display = (t === tab) ? 'block' : 'none';
+                document.getElementById('tab-' + t).classList.toggle('btn-primary', t === tab);
+            });
+        }
+
+        async function loadCurrentCustomCode() {
+            try {
+                const settings = await db.getSettings();
+                if (settings && settings.customCode) {
+                    document.getElementById('code-html').value = settings.customCode.html || '';
+                    document.getElementById('code-css').value = settings.customCode.css || '';
+                    document.getElementById('code-js').value = settings.customCode.js || '';
+                }
+            } catch (err) {
+                console.log('No custom code loaded');
+            }
+        }
+
+        async function saveCustomCode() {
+            const html = document.getElementById('code-html').value;
+            const css = document.getElementById('code-css').value;
+            const js = document.getElementById('code-js').value;
+
+            try {
+                await db.updateSettings({
+                    customCode: { html, css, js }
+                });
+                alert('✅ Patch Deployed! Changes will reflect on user refresh.');
+                closeCustomCodeModal();
+            } catch (err) {
+                alert('Error saving patch: ' + err.message);
+            }
+        }
+    </script>
+    <style>
+        .fab-btn {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: var(--color-primary);
+            color: black;
+            font-size: 2rem;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 0 20px var(--color-primary);
+            z-index: 1000;
+            transition: transform 0.3s;
+        }
+
+        .fab-btn:hover {
+            transform: scale(1.1);
+        }
+
+        .code-area {
+            width: 100%;
+            height: 300px;
+            background: #111;
+            color: #0f0;
+            font-family: monospace;
+            padding: 15px;
+            border: 1px solid #333;
+            border-radius: 5px;
+            resize: vertical;
+        }
+
+        .code-tab {
+            border-radius: 4px 4px 0 0;
+        }
+    </style>
+</body>
+
+</html>

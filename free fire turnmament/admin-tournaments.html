@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>All Tournaments - Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Inter:wght@400;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+
+<body>
+
+    <div class="admin-layout">
+        <nav class="admin-sidebar">
+            <div class="sidebar-brand">
+                <h2>AETHER <span style="color:var(--color-primary)">//</span> ADMIN</h2>
+            </div>
+            <ul class="sidebar-nav">
+                <li><a href="admin-dashboard.html">📊 Dashboard</a></li>
+                <li><a href="hidden_control.html">➕ Create Tournament</a></li>
+                <li><a href="admin-tournaments.html" class="active">🎮 Tournaments</a></li>
+                <li><a href="admin-players.html">👥 Players</a></li>
+                <li><a href="admin-payments.html">💳 Payments</a></li>
+                <li><a href="admin-withdrawals.html">💸 Withdrawals</a></li>
+                <li><a href="admin-wallet.html">💰 Earnings</a></li>
+                <li><a href="admin-settings.html">⚙️ Settings</a></li>
+            </ul>
+            <div class="sidebar-footer">
+                <button onclick="handleLogout()" class="btn" style="width:100%">LOGOUT</button>
+            </div>
+        </nav>
+
+        <main class="admin-main">
+            <div class="admin-header">
+                <h1>ALL TOURNAMENTS</h1>
+            </div>
+
+            <!-- Filters -->
+            <div class="filter-bar">
+                <select id="filter-status" class="form-control" onchange="filterTournaments()">
+                    <option value="all">All Status</option>
+                    <option value="upcoming">Upcoming</option>
+                    <option value="live">Live</option>
+                    <option value="completed">Completed</option>
+                </select>
+                <input type="text" id="filter-search" class="form-control" placeholder="Search by title..."
+                    oninput="filterTournaments()">
+            </div>
+
+            <!-- Tournament List -->
+            <div class="card">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>TITLE</th>
+                            <th>DATE</th>
+                            <th>ENTRY FEE</th>
+                            <th>SLOTS</th>
+                            <th>STATUS</th>
+                            <th>ACTIONS</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tournament-list">
+                        <!-- Dynamic -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Results Modal -->
+            <div id="results-modal" class="modal-overlay">
+                <div class="modal-content card" style="max-width:700px">
+                    <h2 style="color:var(--color-primary);margin-bottom:20px">MATCH RESULTS</h2>
+                    <div id="results-content">
+                        <!-- Dynamic -->
+                    </div>
+                    <div style="margin-top:20px;display:flex;gap:10px">
+                        <button onclick="saveResults()" class="btn btn-primary">SAVE & DISTRIBUTE PRIZES</button>
+                        <button onclick="closeResultsModal()" class="btn">CANCEL</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/database.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/payment.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        let allTournaments = [];
+        let currentTournamentId = null;
+        let fetchedResults = [];
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadTournaments();
+        });
+
+        async function loadTournaments() {
+            const tbody = document.getElementById('tournament-list');
+            try {
+                allTournaments = await db.getTournaments();
+                renderTournaments(allTournaments);
+            } catch (err) {
+                tbody.innerHTML = '<tr><td colspan="6" style="color:red">Error loading tournaments</td></tr>';
+            }
+        }
+
+        function renderTournaments(tournaments) {
+            const tbody = document.getElementById('tournament-list');
+            if (tournaments.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="color:var(--color-text-muted)">No tournaments found</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = tournaments.map(t => {
+                const statusClass = t.trackingState === 'live' ? 'live' : (t.status === 'completed' ? '' : 'upcoming');
+                const statusText = t.trackingState === 'live' ? 'LIVE' : (t.status?.toUpperCase() || 'UPCOMING');
+
+                let actions = '';
+                if (t.status === 'completed') {
+                    actions = `<button onclick="viewResults('${t.id}')" class="btn action-btn">VIEW RESULTS</button>`; // Legacy view or new? Let's keep it simple for now, maybe redirect too?
+                    // Better to redirect to manager even for completed to see details
+                    actions = `<a href="admin-match-manager.html?id=${t.id}" class="btn action-btn" style="text-decoration:none">VIEW DETAILS</a>`;
+                } else {
+                    // For upcoming or live, go to manager
+                    actions = `
+                        <a href="admin-match-manager.html?id=${t.id}" class="btn action-btn btn-primary" style="text-decoration:none">MANAGE MATCH</a>
+                        <button onclick="deleteTournament('${t.id}')" class="btn action-btn reject" style="margin-left:5px">DELETE</button>
+                    `;
+                }
+
+                return `
+                    <tr>
+                        <td>
+                            <strong style="color:white">${t.title}</strong>
+                            <br><span style="color:#666;font-size:0.8rem">${t.map || ''} | ${t.mode || ''}</span>
+                        </td>
+                        <td style="color:#888">${new Date(t.date).toLocaleDateString()}</td>
+                        <td style="color:var(--color-primary)">${t.entryFee ? '₹' + t.entryFee : 'FREE'}</td>
+                        <td style="color:#888">${t.teamSize || 48}</td>
+                        <td><span class="badge ${statusClass}">${statusText}</span></td>
+                        <td>${actions}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        function filterTournaments() {
+            const status = document.getElementById('filter-status').value;
+            const search = document.getElementById('filter-search').value.toLowerCase();
+
+            let filtered = allTournaments;
+            if (status !== 'all') {
+                if (status === 'live') {
+                    filtered = filtered.filter(t => t.trackingState === 'live');
+                } else {
+                    filtered = filtered.filter(t => t.status === status);
+                }
+            }
+            if (search) {
+                filtered = filtered.filter(t => t.title.toLowerCase().includes(search));
+            }
+            renderTournaments(filtered);
+        }
+
+        async function startMatch(id) {
+            const roomId = prompt('Enter Custom Room ID:');
+            if (!roomId) return;
+            const roomPass = prompt('Enter Room Password:');
+            if (!roomPass) return;
+
+            try {
+                await db.updateTournament(id, {
+                    trackingState: 'live',
+                    roomId,
+                    roomPass
+                });
+                alert('Match Started! Players can now see Room ID.');
+                loadTournaments();
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        async function fetchResults(id) {
+            currentTournamentId = id;
+            const modal = document.getElementById('results-modal');
+            const content = document.getElementById('results-content');
+            modal.classList.add('active');
+
+            try {
+                const tournament = await db.getTournamentById(id);
+                // Simulation of connecting to Custom Room
+                content.innerHTML = `
+                    <div style="text-align:center;padding:40px">
+                        <div style="font-size:2rem;margin-bottom:10px">📡</div>
+                        <h3 style="color:var(--color-primary)">INITIALIZING DATA UPLINK...</h3>
+                        <p style="color:#666">Target Room: ${tournament.roomId || 'UNKNOWN'}</p>
+                        <div class="progress-bar" style="width:100%;background:#333;height:5px;margin-top:20px;border-radius:5px;overflow:hidden">
+                            <div class="progress-fill" style="width:0%;height:100%;background:var(--color-primary);transition:width 2s ease"></div>
+                        </div>
+                    </div>
+                `;
+
+                // Animate Progress
+                setTimeout(() => document.querySelector('.progress-fill').style.width = '70%', 100);
+
+                await new Promise(resolve => setTimeout(resolve, 2000)); // Fake Delay
+
+                const registrations = await db.getRegistrations(id);
+
+                if (registrations.length === 0) {
+                    content.innerHTML = '<p style="color:red">No players registered or room empty.</p>';
+                    return;
+                }
+
+                // Fetch kills for each player (using mock for demo)
+                fetchedResults = [];
+                for (const reg of registrations) {
+                    // Real Match: Default to 0, Admin must enter from screenshot
+                    const kills = 0;
+                    fetchedResults.push({
+                        uid: reg.userUid,
+                        email: reg.userEmail,
+                        ign: reg.userIgn,
+                        kills
+                    });
+                }
+
+                // Sort by kills
+                fetchedResults.sort((a, b) => b.kills - a.kills);
+
+                // Render editable results
+                content.innerHTML = `
+                    <p style="margin-bottom:15px;color:#888;display:flex;justify-content:space-between">
+                        <span>✅ DATA SYNC COMPLETE</span>
+                        <span style="color:var(--color-primary)">LIVE TRACKING ACTIVE</span>
+                    </p>
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>RANK</th>
+                                <th>PLAYER (IGN)</th>
+                                <th>UID</th>
+                                <th>KILLS (LIVE)</th>
+                                <th>PRIZE</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${fetchedResults.map((r, i) => {
+                    const prize = calculatePrize(i, r.kills, tournament);
+                    const flagged = r.kills > 10 ? ' style="color:orange"' : '';
+                    return `
+                                    <tr>
+                                        <td style="color:${i < 3 ? 'gold' : 'white'}">#${i + 1}</td>
+                                        <td${flagged}>${r.ign} ${r.kills > 10 ? '⚠️' : ''}</td>
+                                        <td style="color:#666">${r.uid}</td>
+                                        <td><input type="number" value="${r.kills}" min="0" max="99" class="form-control" style="width:60px; text-align:center; border:1px solid var(--color-secondary)" data-uid="${r.uid}" onchange="recalculatePrizes()"></td>
+                                        <td style="color:var(--color-primary)" data-prize="${r.uid}">₹${prize}</td>
+                                    </tr>
+                                `;
+                }).join('')}
+                        </tbody>
+                    </table>
+                `;
+
+            } catch (err) {
+                content.innerHTML = '<p style="color:red">Error: ' + err.message + '</p>';
+            }
+        }
+
+        function calculatePrize(rank, kills, tournament) {
+            let prize = 0;
+            if (rank === 0) prize = parseInt(tournament.prizeFirst || 0);
+            else if (rank === 1) prize = parseInt(tournament.prizeSecond || 0);
+            else if (rank === 2) prize = parseInt(tournament.prizeThird || 0);
+            prize += kills * parseInt(tournament.perKillBonus || 0);
+            return prize;
+        }
+
+        function recalculatePrizes() {
+            const tournament = allTournaments.find(t => t.id === currentTournamentId);
+            const inputs = document.querySelectorAll('#results-content input[data-uid]');
+
+            // Get updated kills
+            const updatedResults = [];
+            inputs.forEach(input => {
+                const uid = input.dataset.uid;
+                const kills = parseInt(input.value) || 0;
+                const result = fetchedResults.find(r => r.uid === uid);
+                updatedResults.push({ ...result, kills });
+            });
+
+            // Sort and update prizes
+            updatedResults.sort((a, b) => b.kills - a.kills);
+            updatedResults.forEach((r, i) => {
+                const prize = calculatePrize(i, r.kills, tournament);
+                const prizeCell = document.querySelector(`[data-prize="${r.uid}"]`);
+                if (prizeCell) prizeCell.textContent = '₹' + prize;
+            });
+
+            fetchedResults = updatedResults;
+        }
+
+        async function saveResults() {
+            if (!confirm('This will finalize the match and distribute prizes. Continue?')) return;
+
+            try {
+                const tournament = await db.getTournamentById(currentTournamentId);
+
+                // Prepare results with prizes
+                const finalResults = fetchedResults.map((r, i) => ({
+                    ...r,
+                    rank: i + 1,
+                    prize: calculatePrize(i, r.kills, tournament)
+                }));
+
+                // Distribute prizes
+                for (const result of finalResults) {
+                    if (result.prize > 0) {
+                        await db.addFunds(result.email, result.prize, 'prize', {
+                            tournamentId: currentTournamentId,
+                            position: result.rank,
+                            kills: result.kills
+                        });
+                    }
+                }
+
+                // Update tournament status
+                await db.updateTournament(currentTournamentId, {
+                    status: 'completed',
+                    trackingState: 'completed',
+                    results: finalResults
+                });
+
+                alert('Match finalized! Prizes distributed to winners.');
+                closeResultsModal();
+                loadTournaments();
+
+            } catch (err) {
+                alert('Error: ' + err.message);
+            }
+        }
+
+        async function viewResults(id) {
+            const tournament = await db.getTournamentById(id);
+            if (!tournament.results) {
+                alert('No results available');
+                return;
+            }
+
+            currentTournamentId = id;
+            fetchedResults = tournament.results;
+
+            const modal = document.getElementById('results-modal');
+            const content = document.getElementById('results-content');
+
+            content.innerHTML = `
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>RANK</th>
+                            <th>PLAYER</th>
+                            <th>KILLS</th>
+                            <th>PRIZE</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tournament.results.map((r, i) => `
+                            <tr>
+                                <td style="color:${i < 3 ? 'gold' : 'white'}">#${i + 1}</td>
+                                <td>${r.ign || r.uid}</td>
+                                <td>${r.kills}</td>
+                                <td style="color:var(--color-primary)">₹${r.prize || 0}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+            modal.classList.add('active');
+        }
+
+        function closeResultsModal() {
+            document.getElementById('results-modal').classList.remove('active');
+        }
+
+        async function deleteTournament(id) {
+            if (!confirm('Delete this tournament?')) return;
+            await db.deleteTournament(id);
+            loadTournaments();
+        }
+    </script>
+</body>
+
+</html>

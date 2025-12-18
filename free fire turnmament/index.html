@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Access - FF Tournament</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Inter:wght@400;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+
+    <div class="container" style="min-height: 100vh; display: flex; align-items: center; justify-content: center;">
+        <div class="card" style="width: 100%; max-width: 400px; padding: 3rem 2rem;">
+            <div style="text-align: center; margin-bottom: 3rem;">
+                <h1 style="color: var(--color-primary); text-shadow: var(--neon-glow); margin-bottom: 0.5rem;">AETHER
+                </h1>
+                <p style="letter-spacing: 3px; color: var(--color-secondary); font-size: 0.8rem;">TOURNAMENT SYSTEM</p>
+            </div>
+
+            <form onsubmit="handleLogin(event)">
+                <div style="margin-bottom: 20px;">
+                    <label
+                        style="display: block; margin-bottom: 5px; font-size: 0.8rem; color: var(--color-text-muted);">IDENTITY</label>
+                    <input type="email" id="email" class="form-control" placeholder="Enter Access ID" required>
+                </div>
+
+                <div style="margin-bottom: 30px;">
+                    <label
+                        style="display: block; margin-bottom: 5px; font-size: 0.8rem; color: var(--color-text-muted);">PASSCODE</label>
+                    <input type="password" id="password" class="form-control" placeholder="Enter Passcode" required>
+                </div>
+
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                    Establish Uplink
+                </button>
+            </form>
+
+            <div style="margin-top: 30px; text-align: center;">
+                <p style="color: var(--color-text-muted); margin-bottom: 10px;">- OR -</p>
+                <button onclick="handleGoogleLogin()" class="btn" style="width: 100%; font-size: 0.9rem;">Login with
+                    Google</button>
+
+                <p style="margin-top: 30px;">
+                    New User? <a href="register.html"
+                        style="color: var(--color-secondary); font-weight: bold;">Initialize Profile</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/database.js"></script>
+    <script src="js/auth.js"></script>
+</body>
+
+</html>

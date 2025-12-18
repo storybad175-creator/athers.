@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Earnings - Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Inter:wght@400;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="stylesheet" href="css/admin.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+
+    <div class="admin-layout">
+        <nav class="admin-sidebar">
+            <div class="sidebar-brand">
+                <h2>AETHER <span style="color:var(--color-primary)">//</span> ADMIN</h2>
+            </div>
+            <ul class="sidebar-nav">
+                <li><a href="admin-dashboard.html">📊 Dashboard</a></li>
+                <li><a href="hidden_control.html">➕ Create Tournament</a></li>
+                <li><a href="admin-tournaments.html">🎮 Tournaments</a></li>
+                <li><a href="admin-players.html">👥 Players</a></li>
+                <li><a href="admin-payments.html">💳 Payments</a></li>
+                <li><a href="admin-withdrawals.html">💸 Withdrawals</a></li>
+                <li><a href="admin-wallet.html" class="active">💰 Earnings</a></li>
+                <li><a href="admin-settings.html">⚙️ Settings</a></li>
+            </ul>
+            <div class="sidebar-footer"><button onclick="handleLogout()" class="btn" style="width:100%">LOGOUT</button>
+            </div>
+        </nav>
+
+        <main class="admin-main">
+            <div class="admin-header">
+                <h1>PLATFORM EARNINGS</h1>
+            </div>
+
+            <!-- Summary Cards -->
+            <div class="grid grid-4" style="margin-bottom:30px">
+                <div class="stat-card" style="background:linear-gradient(135deg, rgba(0,255,0,0.1), transparent)">
+                    <div class="stat-value" id="total-revenue">₹0</div>
+                    <div class="stat-label">TOTAL REVENUE</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="total-payouts">₹0</div>
+                    <div class="stat-label">TOTAL PAYOUTS</div>
+                </div>
+                <div class="stat-card" style="background:linear-gradient(135deg, rgba(255,15,15,0.1), transparent)">
+                    <div class="stat-value" id="net-profit">₹0</div>
+                    <div class="stat-label">NET PROFIT</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="pending-payouts">₹0</div>
+                    <div class="stat-label">PENDING PAYOUTS</div>
+                </div>
+            </div>
+
+            <div class="grid grid-2">
+                <div class="card">
+                    <h3 style="margin-bottom:15px">REVENUE BREAKDOWN</h3>
+                    <canvas id="revenueBreakdown" height="250"></canvas>
+                </div>
+                <div class="card">
+                    <h3 style="margin-bottom:15px">MONTHLY TREND</h3>
+                    <canvas id="monthlyTrend" height="250"></canvas>
+                </div>
+            </div>
+
+            <div class="card" style="margin-top:30px">
+                <h3 style="margin-bottom:15px">DETAILED BREAKDOWN</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>CATEGORY</th>
+                            <th>AMOUNT</th>
+                            <th>PERCENTAGE</th>
+                        </tr>
+                    </thead>
+                    <tbody id="breakdown-table"></tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+    <script src="js/firebase-config.js"></script>
+    <script src="js/database.js"></script>
+    <script src="js/auth.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', loadEarnings);
+
+        async function loadEarnings() {
+            try {
+                const transactions = await db.getTransactionHistory();
+                const withdrawals = await db.getWithdrawals();
+
+                // Calculate totals
+                const entryFees = transactions.filter(t => t.reason === 'entry_fee').reduce((sum, t) => sum + t.amount, 0);
+                const deposits = transactions.filter(t => t.source && t.source.includes('deposit')).reduce((sum, t) => sum + t.amount, 0);
+                const prizes = transactions.filter(t => t.source === 'prize').reduce((sum, t) => sum + t.amount, 0);
+                const referrals = transactions.filter(t => t.source && t.source.includes('referral')).reduce((sum, t) => sum + t.amount, 0);
+
+                const approvedWithdrawals = withdrawals.filter(w => w.status === 'approved').reduce((sum, w) => sum + w.amount, 0);
+                const pendingWithdrawals = withdrawals.filter(w => w.status === 'pending').reduce((sum, w) => sum + w.amount, 0);
+
+                const totalRevenue = entryFees;
+                const totalPayouts = prizes + approvedWithdrawals;
+                const netProfit = totalRevenue - prizes; // Platform keeps entry fees minus prizes
+
+                document.getElementById('total-revenue').textContent = '₹' + totalRevenue;
+                document.getElementById('total-payouts').textContent = '₹' + totalPayouts;
+                document.getElementById('net-profit').textContent = '₹' + netProfit;
+                document.getElementById('pending-payouts').textContent = '₹' + pendingWithdrawals;
+
+                // Breakdown table
+                const breakdown = [
+                    { category: 'Entry Fees Collected', amount: entryFees },
+                    { category: 'Prizes Distributed', amount: prizes },
+                    { category: 'Referral Bonuses', amount: referrals },
+                    { category: 'Withdrawals Approved', amount: approvedWithdrawals },
+                    { category: 'Net Platform Profit', amount: netProfit }
+                ];
+
+                const total = entryFees || 1;
+                document.getElementById('breakdown-table').innerHTML = breakdown.map(b => `
+                    <tr>
+                        <td style="color:white">${b.category}</td>
+                        <td style="color:var(--color-primary)">₹${b.amount}</td>
+                        <td style="color:#888">${((b.amount / total) * 100).toFixed(1)}%</td>
+                    </tr>
+                `).join('');
+
+                // Charts
+                new Chart(document.getElementById('revenueBreakdown'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Entry Fees', 'Prizes', 'Referrals'],
+                        datasets: [{
+                            data: [entryFees, prizes, referrals],
+                            backgroundColor: ['#ff0f0f', '#00f0ff', '#ffd700']
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { position: 'bottom', labels: { color: '#888' } } }
+                    }
+                });
+
+                new Chart(document.getElementById('monthlyTrend'), {
+                    type: 'line',
+                    data: {
+                        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                        datasets: [{
+                            label: 'Revenue',
+                            data: [100, 250, 400, 600, 800, totalRevenue],
+                            borderColor: '#ff0f0f',
+                            fill: false
+                        }, {
+                            label: 'Profit',
+                            data: [50, 120, 200, 350, 500, netProfit],
+                            borderColor: '#00ff00',
+                            fill: false
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        scales: {
+                            y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.1)' } },
+                            x: { grid: { display: false } }
+                        }
+                    }
+                });
+
+            } catch (err) {
+                console.error(err);
+            }
+        }
+    </script>
+</body>
+
+</html>

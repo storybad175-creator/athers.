@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Earn Ad Coins - AETHER</title>
+    <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;700&family=Inter:wght@400;600&display=swap"
+        rel="stylesheet">
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        .earn-container {
+            max-width: 600px;
+            margin: 50px auto;
+            text-align: center;
+        }
+
+        .ad-display {
+            width: 100%;
+            height: 300px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px dashed var(--color-primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 30px 0;
+            position: relative;
+            overflow: hidden;
+            border-radius: 12px;
+        }
+
+        .ad-content {
+            font-size: 1.2rem;
+            color: var(--color-primary);
+            z-index: 2;
+        }
+
+        .ad-timer {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            height: 4px;
+            background: var(--color-secondary);
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+
+        .coin-popup {
+            position: absolute;
+            color: gold;
+            font-weight: bold;
+            font-size: 1.5rem;
+            animation: floatUp 1s ease-out forwards;
+        }
+
+        @keyframes floatUp {
+            0% {
+                transform: translateY(0);
+                opacity: 1;
+            }
+
+            100% {
+                transform: translateY(-50px);
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar">
+        <div class="container nav-flex">
+            <div class="brand">AETHER <span style="color:var(--color-secondary)">//</span> EARN</div>
+            <a href="dashboard.html" class="btn">DASHBOARD</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="earn-container card">
+            <h1>ADSENSE REWARD HUB</h1>
+            <p style="color:var(--color-text-muted)">Watch verified Google Ads to earn Ad Coins. 1 Ad = 1 Coin.</p>
+
+            <div style="margin: 20px 0; display: flex; justify-content: center; gap: 30px;">
+                <div class="stat-item">
+                    <div style="font-size: 0.8rem; color: #888;">TOTAL EARNED</div>
+                    <div id="session-earned" style="font-size: 1.5rem; color: gold;">0</div>
+                </div>
+                <div class="stat-item">
+                    <div style="font-size: 0.8rem; color: #888;">STATUS</div>
+                    <div id="status-text" style="font-size: 1.5rem; color: var(--color-primary);">INITIALIZING...</div>
+                </div>
+            </div>
+
+            <div class="ad-display" id="ad-panel" style="min-height: 200px; display: flex; flex-direction: column;">
+                <div id="ad-status" style="margin-bottom: 10px;">Waiting for Ad Network...</div>
+                <div id="reward-prompt" style="display:none">
+                    <p>Ad is ready! Click below to watch and earn.</p>
+                    <button id="show-ad-btn" class="btn btn-primary">WATCH AD NOW</button>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 15px;">
+                <button onclick="startEarning()" id="start-btn" class="btn btn-primary" style="flex: 2;">START
+                    CONTINUOUS EARNING</button>
+                <button onclick="stopEarning()" id="stop-btn" class="btn" style="flex: 1;" disabled>STOP</button>
+            </div>
+
+            <p style="margin-top: 20px; font-size: 0.8rem; color: #666;">Note: Google AdSense/Ad Manager Reward Ads
+                require user interaction to show. Each completion awards 1 Ad Coin.</p>
+        </div>
+    </div>
+
+    <!-- Google Publisher Tag -->
+    <script async src="https://securepubads.g.doubleclick.net/tag/js/gpt.js"></script>
+    <script src="js/database.js"></script>
+    <script>
+        window.googletag = window.googletag || { cmd: [] };
+        let rewardedSlot;
+        let isEarning = false;
+        let sessionCoins = 0;
+        let currentUser = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            currentUser = db.getCurrentUser();
+            if (!currentUser) window.location.href = 'index.html';
+
+            // Load Ad Settings
+            try {
+                const settings = await db.getSettings();
+                const AD_UNIT_PATH = settings.rewardAdUnit || '/6499/example/rewarded';
+
+                if (AD_UNIT_PATH === '/6499/example/rewarded') {
+                    document.getElementById('ad-status').innerHTML = '<span style="color:orange">TEST MODE ACTIVE</span><br>Waiting for test ad...';
+                }
+
+                initAds(AD_UNIT_PATH);
+            } catch (err) {
+                console.error("Failed to load ad settings, using fallback");
+                initAds('/6499/example/rewarded');
+            }
+        });
+
+        function initAds(adUnitPath) {
+            googletag.cmd.push(() => {
+                rewardedSlot = googletag.defineOutOfPageSlot(adUnitPath, googletag.enums.OutOfPageFormat.REWARDED);
+
+                if (rewardedSlot) {
+                    rewardedSlot.addService(googletag.pubads());
+
+                    googletag.pubads().addEventListener('rewardedSlotReady', (event) => {
+                        console.log('Ad is ready.');
+                        document.getElementById('ad-status').textContent = 'Verified Ad Ready!';
+                        document.getElementById('reward-prompt').style.display = 'block';
+
+                        document.getElementById('show-ad-btn').onclick = () => {
+                            event.makeRewardedVisible();
+                            document.getElementById('reward-prompt').style.display = 'none';
+                        };
+                    });
+
+                    googletag.pubads().addEventListener('rewardedSlotGranted', async (event) => {
+                        console.log('Reward granted.');
+                        await db.watchAd(currentUser.email);
+                        sessionCoins++;
+                        document.getElementById('session-earned').textContent = sessionCoins;
+
+                        // Show floating +1
+                        const popup = document.createElement('div');
+                        popup.className = 'coin-popup';
+                        popup.style.left = '50%';
+                        popup.style.top = '50%';
+                        popup.textContent = '+1 🪙';
+                        document.getElementById('ad-panel').appendChild(popup);
+                        setTimeout(() => popup.remove(), 1000);
+                    });
+
+                    googletag.pubads().addEventListener('rewardedSlotClosed', (event) => {
+                        console.log('Ad closed.');
+                        if (isEarning) {
+                            requestNewAd();
+                        }
+                    });
+
+                    googletag.enableServices();
+                    document.getElementById('status-text').textContent = 'ADS READY';
+                }
+            });
+        }
+
+        function startEarning() {
+            isEarning = true;
+            document.getElementById('start-btn').disabled = true;
+            document.getElementById('stop-btn').disabled = false;
+            document.getElementById('status-text').textContent = 'LOOP ACTIVE';
+            requestNewAd();
+        }
+
+        function requestNewAd() {
+            if (!isEarning) return;
+            document.getElementById('ad-status').textContent = 'Fetching next ad layer...';
+            googletag.cmd.push(() => {
+                googletag.pubads().refresh([rewardedSlot]);
+            });
+        }
+
+        function stopEarning() {
+            isEarning = false;
+            document.getElementById('start-btn').disabled = false;
+            document.getElementById('stop-btn').disabled = true;
+            document.getElementById('status-text').textContent = 'STOPPED';
+            document.getElementById('ad-status').textContent = 'Earning paused.';
+            document.getElementById('reward-prompt').style.display = 'none';
+        }
+    </script>
+</body>
+
+</html>
